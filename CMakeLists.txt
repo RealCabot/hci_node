@@ -8,16 +8,17 @@ project(hci_node)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  actionlib
-  actionlib_msgs
-  audio_common_msgs
-  diagnostic_msgs
-  message_generation
-  message_runtime
+  #actionlib
+  #actionlib_msgs
+  #audio_common_msgs
+  #diagnostic_msgs
+  #message_generation
+  #message_runtime
   roscpp
   roslib
   rospy
   std_msgs
+  sound_play
 )
 
 ## System dependencies are found with CMake's conventions

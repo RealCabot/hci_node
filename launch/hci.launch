@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 
-  <node name="hci" pkg="hci_node" type="hci.py">
-	<!--	
-	<rosparam command="load" file="$(find local_planner)/config/waypoints.yaml" />
-	<param name="base_width" value="0.2" />
-	<param name="distance_tolerance" value="0.02"/>
-	-->
-
- </node>
+  <node name="soundplay_node" pkg="hci_node" type="soundplay.py"> </node>
+    <node name="say_node" pkg="hci_node" type="say.py"> </node>
 </launch>
