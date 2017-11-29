@@ -5,5 +5,14 @@
   <node name="say_node" pkg="hci_node" type="say.py" output = "screen"> 
   	  <!--MIGHT NOT NEED TO COPY BELOW LINE INTO LOCAL_PLANNER "all.launch" file -->
   	  <rosparam command="load" file="$(find local_planner)/config/waypoints.yaml" />
+
+  	  <!-- this is the maximum angle (in radians) before user is warned about turn-->
+  	  <param name="turn_threshold" value="1" />
+
+  	  <!-- this is the maximum distance (in meters) before user is warned about turn-->
+      <param name="warn_threshold" value="2.3"/>
+
+      <!-- True = use feet for distance units, False = use meters as distance units-->
+      <param name="isFeet" value="True"/>
   </node>
 </launch>
