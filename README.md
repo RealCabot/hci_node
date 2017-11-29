@@ -10,16 +10,19 @@ git clone https://github.com/RealCabot/hci_node
 ```
 
 ### Description
-This node warns the user before and after a turn. 
+This node warns the user before and after a turn through text-to-speech.
 
-Currently, the launch file launches a sound_play node (which plays the sound) and then launches a say_node (which receives waypoint messages).
+The launch file launches a sound_play node (which plays the sound) and then launches a say_node (which receives waypoint messages).
 
 #### Subscribes to
  - `waypt` - "waypoint" messages published by local_planner
 
 #### Messages
  - `waypoint` message, containing the waypoint CaBot is trying to reach and the current distance from the waypoint
-
+#### ROS Parameters
+ - `turn_threshold` - maximum angle (in radians) before user is warned about turn
+ - `warn_threshold` - maximum distance (in meters) before user is warned about turn
+ - `isFeet` -  True = use feet for distance units, False = use meters as distance units
 
 ### Running node
 ```
