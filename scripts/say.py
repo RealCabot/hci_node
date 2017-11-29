@@ -14,20 +14,51 @@ turnThreshold = None  # angle of turn beyond which we warn user
 currPt = 0  # detect when waypoint changes to next waypoint
 isFeet = None #choose between feet or meters
 warned = False
+#preWarned = False
 footToMeter = 3.2808    #1m = 3.2808 ft
 meterToFoot = .31       #1 foot = .31 meters
+turnDelay  = rospy.Duration(1.5)       # announce turn completion delay after changing states
+dist_str = ""
+
+#tell user turn is completed
+def postWarn(event):
+    global  dist_str
+    #warn user after changing waypoints (post-warn)
+    #if not postWarned:
+    completeMsg = "Turn completed. Next turn in " + dist_str
+    print completeMsg
+    soundhandle.say(completeMsg)  # indicate turn is finished
+    #postWarned = True
+
+def preWarn(ptKey, distToPoint):
+    global warned, dist_str
+    currPoint = wayPoints[ptKey]
+    currAngle = currPoint["theta"]
+    # print "currAngle: ", currAngle, "distToPoint: ", distToPoint
+
+    if abs(currAngle) >= turnThreshold and distToPoint <= warnThreshold:
+        if currAngle < 0:  # right turn is negative
+            direction = "right"
+        else:  # left turn is positive
+            direction = "left"
+
+        angleStr = str(round(np.rad2deg(abs(currAngle)), 3))
+        warnMsg = "Turn " + direction + " " + angleStr + " degrees in " + dist_str
+        print warnMsg
+        soundhandle.say(warnMsg)  # speak warning to user
+        warned = True
 
 # NOTE: THIS FUNCTION ASSUMES A CONTINUOUS STREAM OF DISTANCE AND WAYPOINT NUMBERS
 # ABRUPT TRANSITIONS WILL GIVE INACCURATE READINGS
 def getPos(msg):
-    global soundhandle, warnThreshold, turnThreshold, warned, currPt
+    global soundhandle, warnThreshold, turnThreshold, warned, currPt, dist_str, isFeet
     newPt = msg.pointNum
     ptKey = str(newPt)
     distToPoint = msg.dist
 
     if isFeet: #convert meters to feet
         if (distToPoint < meterToFoot): #use decimal if dist is less than 1 ft
-            dist_str = round(distToPoint * footToMeter, 2)
+            dist_str = str(round(distToPoint * footToMeter, 2)) + " feet"
         else:
             dist_str = str(int(distToPoint * footToMeter)) + " feet"
     else: #use meters
@@ -35,33 +66,16 @@ def getPos(msg):
 
     # Detect waypoint number has updated. There's probably a better way to do this
     if currPt != newPt:
-        if warned == True:
-            completeMsg = "Turn completed. Next turn in " + dist_str
-            print completeMsg
-            soundhandle.say(completeMsg)  # indicate turn is finished
-
+        #postWarned = False
         warned = False
+        # do not postwarn user when starting
+        if currPt != 0:
+            rospy.Timer(turnDelay, postWarn, oneshot = True) #tell user turn is completed
         currPt = newPt
 
-     # warn the user if not already warned
+    # warn immediately before turn but after postWarning
     if not warned and ptKey in wayPoints:
-
-        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
-        currPoint = wayPoints[ptKey]
-        currAngle = currPoint["theta"]
-        # print "currAngle: ", currAngle, "distToPoint: ", distToPoint
-
-        if abs(currAngle) >= turnThreshold and distToPoint <= warnThreshold:
-            if currAngle < 0:  # right turn is negative
-                direction = "right"
-            else:  # left turn is positive
-                direction = "left"
-
-            angleStr = str(round(np.rad2deg(abs(currAngle)), 3))
-            warnMsg = "Turn " + direction + " " + angleStr + " degrees in " + dist_str
-            print warnMsg
-            soundhandle.say(warnMsg)  # speak warning to user
-            warned = True
+        preWarn(ptKey, distToPoint)
 
 
 # Code based on: https://answers.ros.org/question/10829/text-to-speech-in-a-python-node/
