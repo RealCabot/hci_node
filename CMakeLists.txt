@@ -9,6 +9,8 @@ project(hci_node)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
+  nav_msgs
+  geometry_msgs
   message_generation
   rospy
   sound_play
