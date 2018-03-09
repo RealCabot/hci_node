@@ -13,7 +13,6 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
   rospy
-  sound_play
 )
 
 ## System dependencies are found with CMake's conventions
