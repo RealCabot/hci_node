@@ -47,6 +47,10 @@ If you didn't hear anything after entering the last command, check your speaker 
  - `warn_threshold` - maximum distance (in meters) before user is warned about turn
  - `isFeet` -  True = use feet for distance units, False = use meters as distance units
 
+### What if I want to contribute without Cabot?
+
+We get you covered. Cabot has a nice simulator. Just run `roslaunch localizer simulated_planner.launch`, and you will get everything you want! (except lidar scan data) You can add destination and pose estimation directly through `rviz`
+
 ### Troubleshooting
 - For soundplay, please refer to the tutorials/troubleshooting in the [sound_play ROS library](http://wiki.ros.org/sound_play)
 - For corner extractor, ask Yanda
