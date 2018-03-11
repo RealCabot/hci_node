@@ -14,8 +14,9 @@ class Extractor:
         self.tolerence = pi/6
         self.dilate_length = 20
         self.noise_length = 10
-        rospy.init_node('corner_extractor')
+        rospy.init_node('corner_extractor', anonymous=True)
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.analyze_plan)
+        self.pub = rospy.Publisher('corners', PoseArray, queue_size=10)
         rospy.spin()
 
     def analyze_plan(self, plan):
@@ -45,7 +46,6 @@ class Extractor:
 
         left_corner_poses = non_maximum_suppression(plan, left_intervals)
         right_corner_poses = non_maximum_suppression(plan, right_intervals)
-        pub = rospy.Publisher('corners', PoseArray, queue_size=10)
         
         msg = PoseArray()
         msg.header.frame_id='/map'
@@ -53,7 +53,7 @@ class Extractor:
 
         print(left_intervals, right_intervals)
 
-        pub.publish(msg)
+        self.pub.publish(msg)
         print('Published corners of length {}'.format(len(msg.poses)))
 
 if __name__ == '__main__':
