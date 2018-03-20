@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 
-  <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py" > </node>
+  <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py" />
+  <include file="$(find kinect2_tracker)/launch/tracker.launch"/>
+
   <!--node name="corner_node" pkg="hci_node" type="corner_extractor.py" output = "screen"> </node> -->
   <node name="warner" pkg="hci_node" type="verbal_warn.py" output = "screen"> 
 
       <!-- this is the maximum distance (in meters) before PEDESTRIAN is warned-->
-      <param name="warn_threshold" value="1.2"/>
+      <param name="warn_threshold" value="2.0"/>
 
   	  <!-- this is the maximum distance (in meters) before USER is warned about turn-->
       <param name="corner_threshold" value="2"/>
+
+      <!-- this is the number of consecutive times it needs for a pedestrain to be really a pedestrain in Kinect Tracker-->
+      <param name="pedestrian_sensitivity" value="5"/>
 
       <!-- 'ft' = use feet for distance units, 'm' = use meters as distance units-->
       <param name="dist_units" value="ft"/>

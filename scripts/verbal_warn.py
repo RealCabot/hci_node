@@ -20,30 +20,41 @@ class Pedestrian_Warner:
 
         self.warnThreshold = rospy.get_param("~warn_threshold", 1.2)  # in meters. Distance to warn pedestrian
         self.cornerWarn = rospy.get_param("~corner_threshold", 2)  # in meters. Distance to warn user of upcoming turn
+        self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 3)  # in meters. Distance to warn user of upcoming turn
         self.prev_peds = 0
+        self.ped_same_time = 0 # The consecutive time the pedestrain count is the same
 
         self.cornerPts = None
         self.dist_unit = rospy.get_param("dist_units", 'ft')
+        self.config_client = dynamic_reconfigure.client.Client("/move_base/DWAPlannerROS", timeout=5)
+        self.max_speed = self.config_client.get_configuration()['max_vel_x']
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.get_corners)
         rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.warn_corner)
         rospy.Subscriber("/people_points", user_points, self.get_ped)
-        self.config_client = dynamic_reconfigure.client.Client("/move_base/DWAPlannerROS", timeout=5)
-        self.max_speed = self.config_client.get_configuration()['max_vel_x']
 
         rospy.sleep(1)  # give time for soundplay node to initialize
         self.soundhandle.say('Its your boi')  # confirm that soundplay is working
         rospy.spin()
 
+    def stablizer(self, new_value):
+        if self.prev_peds == new_value:
+            self.ped_same_time+=1
+        else:
+            self.prev_peds = new_value
+            self.ped_same_time = 0
+        return self.ped_same_time == self.pedSensitivity
+
     def get_ped(self, msg):
         peds = msg.people_points
         curr_peds = len([p for p in peds if p.point.z < self.warnThreshold])
-        if self.prev_peds != curr_peds:
+        if self.stablizer(curr_peds):
             if curr_peds:
+                rospy.loginfo('{num} pedestrains ahead'.format(num=curr_peds))
                 self.soundhandle.say('{num} pedestrains ahead'.format(num=curr_peds))
             else:
+                rospy.loginfo('All clear!')
                 self.soundhandle.say('All clear!')
             self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
-            self.prev_peds = curr_peds
     
     def scared_speed(self, num_peds):
         return self.max_speed / (num_peds+1)
