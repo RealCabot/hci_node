@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import tf
 from sound_play.libsoundplay import SoundClient
 from kinect2_tracker.msg import user_points
 import numpy as np
@@ -32,6 +33,10 @@ class Pedestrian_Warner:
         self.config_client = dynamic_reconfigure.client.Client("/move_base/DWAPlannerROS", timeout=5)
         self.max_speed = self.config_client.get_configuration()['max_vel_x']
         self.last_sentence=""
+
+        self.listener = tf.TransformListener()
+        self.listener.waitForTransform('/base_link', '/kinect_camera_frame', rospy.Time(0),rospy.Duration(4.0) )
+
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.get_corners)
         rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.warn_corner)
         rospy.Subscriber("/people_points", user_points, self.get_ped)
@@ -50,7 +55,8 @@ class Pedestrian_Warner:
 
     def get_ped(self, msg):
         peds = msg.people_points
-        curr_peds = len([p for p in peds if p.point.z < self.warnThreshold])
+        peds = [self.listener.transformPoint('/base_link', p) for p in peds] # Transform the points in base frame
+        curr_peds = len([p for p in peds if p.point.x < self.warnThreshold and p.point.z < PEDESTRAIN_HEIGHT_MAX and p.point.z > PEDESTRAIN_HEIGHT_MIN])
         if self.stablizer(curr_peds):
             if curr_peds:
                 sentence = '{num} pedestrains ahead'.format(num=curr_peds)
