@@ -1,22 +1,23 @@
 #!/usr/bin/env python
 # license removed for brevity
-import rospy
-from nav_msgs.msg import Path
+#import rospy
+#from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseArray
 from math import atan2, pi
-import numpy as np
 from angles import shortest_angular_distance
 from d1_toolbox import get_intervals, non_maximum_suppression, dilate, filter_noise
+
+class Corner:
+    def __init__(self, pose, t_type):
+        self.pose = pose
+        self.turnType = t_type
 
 class Extractor:
     def __init__(self):
         self.check_window = 500
-        self.tolerence = pi/6
+        self.tolerence = pi/4  # originally pi/6. changed to remove extraneous corner after turn #2.
         self.dilate_length = 20
         self.noise_length = 10
-        rospy.init_node('corner_extractor')
-        rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.analyze_plan)
-        rospy.spin()
 
     def analyze_plan(self, plan):
         
@@ -45,16 +46,24 @@ class Extractor:
 
         left_corner_poses = non_maximum_suppression(plan, left_intervals)
         right_corner_poses = non_maximum_suppression(plan, right_intervals)
-        pub = rospy.Publisher('corners', PoseArray, queue_size=10)
         
         msg = PoseArray()
-        msg.header.frame_id='/map'
+        msg.header.frame_id = '/map'
         msg.poses=left_corner_poses+right_corner_poses
 
         print(left_intervals, right_intervals)
-
-        pub.publish(msg)
+        #self.pub.publish(msg)
         print('Published corners of length {}'.format(len(msg.poses)))
+        # ========added by Andrew========
+        # create array of corners and denote which corners are left and right turns
+        corners = []
+        for l_p in left_corner_poses:
+            corners.append(Corner(l_p, 'left'))
+        for r_p in right_corner_poses:
+            corners.append(Corner(r_p, 'right'))
+        return corners
+        # ===============================
+
 
 if __name__ == '__main__':
     corner_extractor = Extractor()
