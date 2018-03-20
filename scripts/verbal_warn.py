@@ -12,6 +12,9 @@ import dynamic_reconfigure.client
 # Warns pedestrians if they get too close to CaBot
 # Warns the user of upcoming turns
 
+PEDESTRAIN_HEIGHT_MIN = 1.2/2
+PEDESTRAIN_HEIGHT_MAX = 2.0/2
+
 class Pedestrian_Warner:
     def __init__(self):
         rospy.init_node('pedestrian_warner', anonymous=True)
@@ -28,6 +31,7 @@ class Pedestrian_Warner:
         self.dist_unit = rospy.get_param("dist_units", 'ft')
         self.config_client = dynamic_reconfigure.client.Client("/move_base/DWAPlannerROS", timeout=5)
         self.max_speed = self.config_client.get_configuration()['max_vel_x']
+        self.last_sentence=""
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.get_corners)
         rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.warn_corner)
         rospy.Subscriber("/people_points", user_points, self.get_ped)
@@ -49,11 +53,13 @@ class Pedestrian_Warner:
         curr_peds = len([p for p in peds if p.point.z < self.warnThreshold])
         if self.stablizer(curr_peds):
             if curr_peds:
-                rospy.loginfo('{num} pedestrains ahead'.format(num=curr_peds))
-                self.soundhandle.say('{num} pedestrains ahead'.format(num=curr_peds))
+                sentence = '{num} pedestrains ahead'.format(num=curr_peds)
             else:
-                rospy.loginfo('All clear!')
-                self.soundhandle.say('All clear!')
+                sentence = 'All clear!'
+            if sentence!=self.last_sentence:
+                rospy.loginfo(sentence)
+                self.soundhandle.say(sentence)
+                self.last_sentence = sentence
             self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
     
     def scared_speed(self, num_peds):
