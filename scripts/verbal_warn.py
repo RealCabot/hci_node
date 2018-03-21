@@ -25,6 +25,7 @@ class Pedestrian_Warner:
         self.warnThreshold = rospy.get_param("~warn_threshold", 1.2)  # in meters. Distance to warn pedestrian
         self.cornerWarn = rospy.get_param("~corner_threshold", 2)  # in meters. Distance to warn user of upcoming turn
         self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 3)  # in meters. Distance to warn user of upcoming turn
+        self.tooCloseDistance = rospy.get_param("~too_close_distance", 0.8) # The human is so close that Kinnect cannot get the correct height
         self.prev_peds = 0
         self.ped_same_time = 0 # The consecutive time the pedestrain count is the same
 
@@ -54,12 +55,21 @@ class Pedestrian_Warner:
         return self.ped_same_time == self.pedSensitivity
 
     def get_ped(self, msg):
+
+        def isHuman(p):
+            if p.point.x > self.warnThreshold:
+                return False
+            if p.point.x < self.tooCloseDistance:
+                return True
+            return p.point.z < PEDESTRAIN_HEIGHT_MAX and p.point.z > PEDESTRAIN_HEIGHT_MIN
+
         peds = msg.people_points
         peds = [self.listener.transformPoint('/base_link', p) for p in peds] # Transform the points in base frame
-        curr_peds = len([p for p in peds if p.point.x < self.warnThreshold and p.point.z < PEDESTRAIN_HEIGHT_MAX and p.point.z > PEDESTRAIN_HEIGHT_MIN])
+        curr_peds = len([p for p in peds if isHuman(p)])
         if self.stablizer(curr_peds):
             if curr_peds:
                 sentence = '{num} pedestrains ahead'.format(num=curr_peds)
+                print(peds)
             else:
                 sentence = 'All clear!'
             if sentence!=self.last_sentence:

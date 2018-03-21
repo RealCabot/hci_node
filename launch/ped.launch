@@ -16,6 +16,9 @@
       <!-- this is the number of consecutive times it needs for a pedestrain to be really a pedestrain in Kinect Tracker-->
       <param name="pedestrian_sensitivity" value="5"/>
 
+      <!-- this is the distance the human is so close to Cabot the height will be wrong-->
+      <param name="too_close_distance" value="0.8" />
+
       <!-- 'ft' = use feet for distance units, 'm' = use meters as distance units-->
       <param name="dist_units" value="ft"/>
   </node>
