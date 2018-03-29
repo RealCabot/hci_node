@@ -43,7 +43,7 @@ class Pedestrian_Warner:
         rospy.Subscriber("/people_points", user_points, self.get_ped)
 
         rospy.sleep(1)  # give time for soundplay node to initialize
-        self.soundhandle.say('Its your boi')  # confirm that soundplay is working
+        self.soundhandle.say('Pass me the bottle')  # confirm that soundplay is working
         rospy.spin()
 
     def stablizer(self, new_value):
@@ -65,18 +65,27 @@ class Pedestrian_Warner:
 
         peds = msg.people_points
         peds = [self.listener.transformPoint('/base_link', p) for p in peds] # Transform the points in base frame
-        curr_peds = len([p for p in peds if isHuman(p)])
-        if self.stablizer(curr_peds):
-            if curr_peds:
-                sentence = '{num} pedestrains ahead'.format(num=curr_peds)
-                print(peds)
+        # boxes = [[self.listener.transformPoint('/base_link', box_point) for box_point in (box.min, box.max)] for box in msg.boxes] # 2d array or transformed bounding box
+
+        # ic(list(boxes))
+        real_peds = [p for p in peds if isHuman(p)]
+        ped_num = len(real_peds)
+        if self.stablizer(ped_num):
+            if ped_num:
+                #sentence = '{num} pedestrains ahead'.format(num=ped_num)
+                print ped_num
+                #sentence = 'pedestrains ahead'.format(num=ped_num)
+                sentence = 'pedestrains ahead'
+                # print(real_peds)
             else:
-                sentence = 'All clear!'
+                # sentence = 'All clear!'
+                #sentence = 'I am deeply emotional'
+                sentence = ' '
             if sentence!=self.last_sentence:
                 rospy.loginfo(sentence)
                 self.soundhandle.say(sentence)
                 self.last_sentence = sentence
-            self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
+            # self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
     
     def scared_speed(self, num_peds):
         return self.max_speed / (num_peds+1)
