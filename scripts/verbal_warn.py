@@ -2,7 +2,7 @@
 import rospy
 import tf
 from sound_play.libsoundplay import SoundClient
-from kinect2_tracker.msg import user_points
+from kinect2_tracker.msg import user_IDs
 import numpy as np
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -40,52 +40,26 @@ class Pedestrian_Warner:
 
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.get_corners)
         rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.warn_corner)
-        rospy.Subscriber("/people_points", user_points, self.get_ped)
+        rospy.Subscriber("/people_skeleton", user_IDs, self.get_ped)
 
         rospy.sleep(1)  # give time for soundplay node to initialize
         self.soundhandle.say('Pass me the bottle')  # confirm that soundplay is working
         rospy.spin()
 
-    def stablizer(self, new_value):
-        if self.prev_peds == new_value:
-            self.ped_same_time+=1
-        else:
-            self.prev_peds = new_value
-            self.ped_same_time = 0
-        return self.ped_same_time == self.pedSensitivity
-
     def get_ped(self, msg):
 
-        def isHuman(p):
-            if p.point.x > self.warnThreshold:
-                return False
-            if p.point.x < self.tooCloseDistance:
-                return True
-            return p.point.z < PEDESTRAIN_HEIGHT_MAX and p.point.z > PEDESTRAIN_HEIGHT_MIN
-
-        peds = msg.people_points
-        peds = [self.listener.transformPoint('/base_link', p) for p in peds] # Transform the points in base frame
-        # boxes = [[self.listener.transformPoint('/base_link', box_point) for box_point in (box.min, box.max)] for box in msg.boxes] # 2d array or transformed bounding box
-
-        # ic(list(boxes))
-        real_peds = [p for p in peds if isHuman(p)]
-        ped_num = len(real_peds)
-        if self.stablizer(ped_num):
-            if ped_num:
-                #sentence = '{num} pedestrains ahead'.format(num=ped_num)
-                print ped_num
-                #sentence = 'pedestrains ahead'.format(num=ped_num)
-                sentence = 'pedestrains ahead'
-                # print(real_peds)
-            else:
-                # sentence = 'All clear!'
-                #sentence = 'I am deeply emotional'
-                sentence = ' '
-            if sentence!=self.last_sentence:
-                rospy.loginfo(sentence)
-                self.soundhandle.say(sentence)
-                self.last_sentence = sentence
-            # self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
+        ped_num = len(msg.users)
+        
+        if ped_num:
+            sentence = 'pedestrains ahead'
+        else:
+            sentence = 'All clear!'
+            #sentence = 'I am deeply emotional'
+        if sentence!=self.last_sentence:
+            rospy.loginfo(sentence)
+            self.soundhandle.say(sentence)
+            self.last_sentence = sentence
+            self.config_client.update_configuration({'max_vel_x': self.scared_speed(ped_num)})
     
     def scared_speed(self, num_peds):
         return self.max_speed / (num_peds+1)
