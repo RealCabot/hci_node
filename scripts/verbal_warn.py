@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import rospy
 import tf
-from sound_play.libsoundplay import SoundClient
 from kinect2_tracker.msg import user_IDs
 import numpy as np
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from std_msgs.msg import String
 from corner_extractor import Extractor
 import dynamic_reconfigure.client
 
@@ -15,6 +15,12 @@ import dynamic_reconfigure.client
 
 PEDESTRAIN_HEIGHT_MIN = 1.2/2
 PEDESTRAIN_HEIGHT_MAX = 2.0/2
+
+class SoundClient:
+    def __init__(self):
+        self.pub = rospy.Publisher('/say', String, queue_size=10)
+    def say(self, sentence):
+        self.pub.publish(sentence)
 
 class Pedestrian_Warner:
     def __init__(self):

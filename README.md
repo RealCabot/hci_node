@@ -6,14 +6,13 @@
         - [Corner Extractor Node](#corner-extractor-node)
             - [Subscribed](#subscribed)
             - [Published](#published)
-        - [Sound Play Node](#sound-play-node)
-            - [Running node](#running-node)
-            - [Subscribed](#subscribed)
         - [Pedestrian Warner Node](#pedestrian-warner-node)
             - [Subscribed](#subscribed)
+            - [Published](#published)
             - [Called Service](#called-service)
         - [Messages](#messages)
         - [ROS Parameters](#ros-parameters)
+        - [What if I want to contribute without Cabot?](#what-if-i-want-to-contribute-without-cabot)
         - [Troubleshooting](#troubleshooting)
 
 
@@ -43,23 +42,6 @@ This node will listen to global plan published by navigation stack, extract the 
 
 - `/corners`: `geometry_msgs::PoseArray`
 
-### Sound Play Node
-The launch file launches a sound_play node (which plays the sound) and then launches a say_node (which receives waypoint messages).
-
-#### Running node
-```
-roslaunch hci_node hci.launch 
-``` 
-In a separate terminal:
-```
-rostopic pub /waypt hci_node/waypoint '{pointNum: 1, dist: .5}' -1
-```
-If you didn't hear anything after entering the last command, check your speaker volume and speaker drivers.
-
-#### Subscribed
-
- - `waypt` - `hci_node::waypoint` messages published by local_planner
-
 ### Pedestrian Warner Node
 
 This node read pedestrians detected by Kinect, then make sound to tell the user. It also slow the robot down.
@@ -67,6 +49,10 @@ This node read pedestrians detected by Kinect, then make sound to tell the user.
 #### Subscribed
 
 - `/people_points`: `kinect2_tracker::user_points`, center of mass for each person
+
+#### Published
+
+- `/say`: `std_messages::String`, things for GUI to say
 
 #### Called Service
 
