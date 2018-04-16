@@ -82,20 +82,23 @@ class Pedestrian_Warner:
             if (dist_laser - PED_DISTANCE_TOLERENCE/2) < dist and dist < (dist_laser + PED_DISTANCE_TOLERENCE/2):
                 num_peds += 1
 
+        print(num_peds)
+
         if self.stablizer(num_peds):
             if num_peds:
-                sentence = '{num} pedestrains ahead'.format(num=ped_num)
+                sentence = '{num} pedestrains ahead'.format(num=num_peds)
             else:
                 sentence = ''
             if sentence!=self.last_sentence:
                 rospy.loginfo(sentence)
                 self.soundhandle.say(sentence)
                 self.last_sentence = sentence
-                self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
+                self.config_client.update_configuration({'max_vel_x': self.scared_speed(num_peds)})
         
     def get_peds(self, msg):
         center_pts = msg.people_points
-        self.potential_peds = [(math.atan(p.point.x/p.point.z), math.sqrt(p.x**2 + p.z**2) for p in center_pts] 
+        self.potential_peds = [(math.atan(p.point.x/p.point.z), math.sqrt(p.point.x**2 + p.point.z**2)) for p in center_pts if p.point.z!=0]
+        # print(self.potential_peds)
 
     def scared_speed(self, num_peds):  
         if num_peds == 0:
