@@ -12,13 +12,14 @@ from corner_extractor import Extractor
 import dynamic_reconfigure.client
 import math
 import time 
-
+import numpy
 
 # This node provides verbal warnings (text-to-speech) for both the user and the pedestrian
 # Warns pedestrians if they get too close to CaBot
 # Warns the user of upcoming turns
 
 PED_DISTANCE_TOLERENCE = 0.11
+ANGLE_MATCH_INDEX_PLUS_MINUS = 15                                                                                                                        # 10 degrees
 
 
 class SoundClient:
@@ -35,7 +36,7 @@ class Pedestrian_Warner:
 
         self.warnThreshold = rospy.get_param("~warn_threshold", 1.2)  # in meters. Distance to warn pedestrian
         self.cornerWarn = rospy.get_param("~corner_threshold", 2)  # in meters. Distance to warn user of upcoming turn
-        self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 3)  # in meters. Distance to warn user of upcoming turn
+        self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 10)  # in meters. Distance to warn user of upcoming turn
         self.tooCloseDistance = rospy.get_param("~too_close_distance", 0.8) # The human is so close that Kinnect cannot get the correct height
         self.prev_peds = 0
         self.ped_same_time = 0 # The consecutive time the pedestrain count is the same
@@ -77,16 +78,15 @@ class Pedestrian_Warner:
         num_peds = 0
         for (angle, dist) in self.potential_peds:
             matched_index = int((angle - ang_min) / ang_inc)
-            dist_laser = laser_vals[matched_index]
-            # Note I do not pick near scan here. I only pick one.
-            if (dist_laser - PED_DISTANCE_TOLERENCE/2) < dist and dist < (dist_laser + PED_DISTANCE_TOLERENCE/2):
-                num_peds += 1
-
-        print(num_peds)
+            dist_lasers = laser_vals[matched_index - ANGLE_MATCH_INDEX_PLUS_MINUS : matched_index + ANGLE_MATCH_INDEX_PLUS_MINUS]
+            for d in dist_lasers:
+	            if (d - PED_DISTANCE_TOLERENCE/2) < dist and dist < (d + PED_DISTANCE_TOLERENCE/2):
+	                num_peds += 1
+	                break
 
         if self.stablizer(num_peds):
             if num_peds:
-                sentence = '{num} pedestrains ahead'.format(num=num_peds)
+                sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
             else:
                 sentence = ''
             if sentence!=self.last_sentence:
@@ -101,10 +101,11 @@ class Pedestrian_Warner:
         # print(self.potential_peds)
 
     def scared_speed(self, num_peds):  
-        if num_peds == 0:
-            return self.max_speed
-        else:
-            return self.max_speed - 0.02	
+    	return self.max_speed
+        # if num_peds == 0:
+        #     return self.max_speed
+        # else:
+        #     return self.max_speed - 0.02	
 
     # called when the corner extractor publishes points
     def get_corners(self, msg):
