@@ -36,7 +36,7 @@ class Pedestrian_Warner:
 
         self.warnThreshold = rospy.get_param("~warn_threshold", 1.2)  # in meters. Distance to warn pedestrian
         self.cornerWarn = rospy.get_param("~corner_threshold", 2)  # in meters. Distance to warn user of upcoming turn
-        self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 10)  # in meters. Distance to warn user of upcoming turn
+        self.pedSensitivity = rospy.get_param("~pedestrian_sensitivity", 15)  # in meters. Distance to warn user of upcoming turn
         self.tooCloseDistance = rospy.get_param("~too_close_distance", 0.8) # The human is so close that Kinnect cannot get the correct height
         self.prev_peds = 0
         self.ped_same_time = 0 # The consecutive time the pedestrain count is the same
@@ -47,6 +47,7 @@ class Pedestrian_Warner:
         self.max_speed = self.config_client.get_configuration()['max_vel_x']
         self.last_sentence=""
         self.last_time = 0
+        self.corner_time = 0
         
         self.potential_peds = []
 
@@ -86,7 +87,12 @@ class Pedestrian_Warner:
 
         if self.stablizer(num_peds):
             if num_peds:
-                sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
+            	now_time = time.time()
+            	if (now_time - self.last_time) > 2 and (now_time - self.corner_time > 4):
+                	sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
+                	self.last_time = now_time
+                else:
+                    sentence = self.last_sentence
             else:
                 sentence = ''
             if sentence!=self.last_sentence:
@@ -140,6 +146,7 @@ class Pedestrian_Warner:
                     units = ' meters'
 
                 # format to only print 1 decimal place
+                self.corner_time = time.time()
                 self.soundhandle.say('Turn ' + turn_dir + ' in ' + v_dist + units)
 
 
