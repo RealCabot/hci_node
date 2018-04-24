@@ -10,7 +10,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import String
 from corner_extractor import Extractor
 import dynamic_reconfigure.client
-import math as m 
+import math
 import time 
 
 
@@ -18,11 +18,7 @@ import time
 # Warns pedestrians if they get too close to CaBot
 # Warns the user of upcoming turns
 
-PEDESTRAIN_HEIGHT_MIN = 1.2/2
-PEDESTRAIN_HEIGHT_MAX = 2.0/2
-#ANG_MIN = None
-#ANG_INC = None
-THRESH = 0.11
+PED_DISTANCE_TOLERENCE = 0.11
 
 
 class SoundClient:
@@ -48,102 +44,59 @@ class Pedestrian_Warner:
         self.dist_unit = rospy.get_param("dist_units", 'ft')
         self.config_client = dynamic_reconfigure.client.Client("/move_base/DWAPlannerROS", timeout=7)
         self.max_speed = self.config_client.get_configuration()['max_vel_x']
-        self.last_sentence=" "
-        self.last_time = 0;
+        self.last_sentence=""
+        self.last_time = 0
         
-        self.angles = {}
-        
+        self.potential_peds = []
 
         rospy.Subscriber('/move_base/NavfnROS/plan', Path, self.get_corners)
         rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.warn_corner)
         #rospy.Subscriber("/people_skeleton", user_IDs, self.get_ped)
-        rospy.Subscriber("/scan", LaserScan, self.get_laser)
+        rospy.Subscriber("/scan", LaserScan, self.filter_peds)
         self.listener = tf.TransformListener()
         self.listener.waitForTransform('/base_link', '/kinect_camera_frame', rospy.Time(0),rospy.Duration(4.0) )
-        rospy.Subscriber("/people_points", user_points, self.get_center)
+        rospy.Subscriber("/people_points", user_points, self.get_peds)
         
 
         rospy.sleep(1)  # give time for soundplay node to initialize
         self.soundhandle.say('Pass me the bottle')  # confirm that soundplay is working
         rospy.spin()
 
-    def get_laser(self, msg):
+    def stablizer(self, new_value):
+        if self.prev_peds == new_value:
+            self.ped_same_time+=1
+        else:
+            self.prev_peds = new_value
+            self.ped_same_time = 0
+        return self.ped_same_time == self.pedSensitivity
 
-        laser_vals = msg.ranges
-        ang_inc = msg.angle_increment
-        ang_min = msg.angle_min
-        inc = 0
-        for scan in laser_vals:
-            angle = ang_min+(inc*ang_inc)
-            if int(angle) in self.angles:
-                self.angles[int(angle)].append(scan)
+    def filter_peds(self, msg):
+
+        laser_vals, ang_inc, ang_min = msg.ranges, msg.angle_increment, msg.angle_min
+
+        num_peds = 0
+        for (angle, dist) in self.potential_peds:
+            matched_index = int((angle - ang_min) / ang_inc)
+            dist_laser = laser_vals[matched_index]
+            # Note I do not pick near scan here. I only pick one.
+            if (dist_laser - PED_DISTANCE_TOLERENCE/2) < dist and dist < (dist_laser + PED_DISTANCE_TOLERENCE/2):
+                num_peds += 1
+
+        if self.stablizer(num_peds):
+            if num_peds:
+                sentence = '{num} pedestrains ahead'.format(num=ped_num)
             else:
-            	self.angles[int(angle)] = [scan]
-                
-            inc += 1
+                sentence = ''
+            if sentence!=self.last_sentence:
+                rospy.loginfo(sentence)
+                self.soundhandle.say(sentence)
+                self.last_sentence = sentence
+                self.config_client.update_configuration({'max_vel_x': self.scared_speed(curr_peds)})
         
-        
-    def get_both(self, center):
-        angle_cent = int(m.atan(center.x/center.y))
-        dist_cent  = m.sqrt(center.x**2 + center.y**2)
-        #print("dist_center: ", dist_cent)
-        for dist_laser in self.angles[angle_cent]:
-	    #print("dist_laser: ", dist_laser)
-            if (dist_laser - THRESH/2) < dist_cent and dist_cent < (dist_laser + THRESH/2):
-                return True
-        return False     
-       
-        
-    def get_center(self, msg):
-
+    def get_peds(self, msg):
         center_pts = msg.people_points
-        centers = [self.listener.transformPoint('/base_link', p).point for p in center_pts] 
-        #print time.time()%4.00 <= 1
-        if (round(time.time())%4.00) == 0: 
-		    ped_num = 0
-		    for center in centers:
-		        #rospy.loginfo("centers: ", center)
-		        ped_there = self.get_both(center)
-		        if ped_there:
-		            ped_num += 1
-		    
-		    
-		    if ped_num:
-		    	sentence = self.last_sentence
-		    	now_time = time.time()
-		    	if (now_time - self.last_time) > 2: 
-		            sentence = '{num} pedestrians ahead'.format(num=ped_num)
-		            self.last_time = now_time
-		    else:
-		    	sentence = ' '
+        self.potential_peds = [(math.atan(p.point.x/p.point.z), math.sqrt(p.x**2 + p.z**2) for p in center_pts] 
 
-		    if sentence!=self.last_sentence:
-		        rospy.loginfo(sentence)
-		        #self.soundhandle.say(sentence_say)
-		        self.soundhandle.say(sentence)
-		        self.last_sentence = sentence
-		        self.config_client.update_configuration({'max_vel_x': self.scared_speed(ped_num)})
-
-
-
-
-    # def get_ped(self, msg):
-
-    #     ped_num = len(msg.users)
-
-        
-        
-    #     if ped_num:
-    #         sentence = 'pedestrains ahead'
-    #     else:
-    #         sentence = 'All clear!'
-    #         #sentence = 'I am deeply emotional'
-    #     if sentence!=self.last_sentence:
-    #         rospy.loginfo(sentence)
-    #         self.soundhandle.say(sentence)
-    #         self.last_sentence = sentence
-    #         self.config_client.update_configuration({'max_vel_x': self.scared_speed(ped_num)})
-    
     def scared_speed(self, num_peds):  
         if num_peds == 0:
             return self.max_speed
