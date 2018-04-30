@@ -86,20 +86,18 @@ class Pedestrian_Warner:
 	                break
 
         if self.stablizer(num_peds):
-            if num_peds:
-            	now_time = time.time()
-            	if (now_time - self.last_time) > 2 and (now_time - self.corner_time > 4):
-                	sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
-                	self.last_time = now_time
+            now_time = time.time()
+            if (now_time - self.last_time) > 2 and (now_time - self.corner_time > 4):
+                self.last_time = now_time
+                if num_peds:
+                    sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
                 else:
-                    sentence = self.last_sentence
-            else:
-                sentence = ''
-            if sentence!=self.last_sentence:
-                rospy.loginfo(sentence)
-                self.soundhandle.say(sentence)
-                self.last_sentence = sentence
-                self.config_client.update_configuration({'max_vel_x': self.scared_speed(num_peds)})
+                    sentence = ''
+                if sentence!=self.last_sentence:
+                    rospy.loginfo(sentence)
+                    self.soundhandle.say(sentence)
+                    self.last_sentence = sentence
+                    self.config_client.update_configuration({'max_vel_x': self.scared_speed(num_peds)})
         
     def get_peds(self, msg):
         center_pts = msg.people_points
