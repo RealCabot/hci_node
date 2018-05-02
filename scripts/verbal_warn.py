@@ -90,7 +90,10 @@ class Pedestrian_Warner:
             if (now_time - self.last_time) > 2 and (now_time - self.corner_time > 4):
                 self.last_time = now_time
                 if num_peds:
-                    sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
+                    if num_peds == 1:
+                         sentence = 'One pedestrian ahead'
+                    else:
+                         sentence = '{num} pedestrains ahead, slowing down'.format(num=num_peds)
                 else:
                     sentence = ''
                 if sentence!=self.last_sentence:
